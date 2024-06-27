@@ -23,6 +23,7 @@ import os
 import keyboard
 from periphery import GPIO, Serial
 import shutil
+import subprocess
 
 DEFAULT_CONFIG_LOCATION = os.path.join(os.path.dirname(__file__), 'cloud_config.ini')
 
@@ -33,8 +34,8 @@ def update_display(display, msg):
 def _none_to_nan(val):
     return float('nan') if val is None else val
 
-def watchdog():
-    os.system('reboot')
+def reboot_board():
+    subprocess.run(["sudo", "reboot"])
 
 def main():
     # Pull arguments from command line.
@@ -55,16 +56,14 @@ def main():
         # Indefinitely update display and upload to cloud.
         sensors = {}
         read_period = int(args.upload_delay / (2 * args.display_duration))
-        flag = True if (input("Inside or Outside (1 or 0): ") == '1') else False
+        # flag = True if (input("Inside or Outside (1 or 0): ") == '1') else False
+        flag = True
         #file1 = open("log.txt", "a")
         num = 0
         filenum = 0
-        filename = "file" + str(filenum) + ".txt"
+        filename = "/logFiles/file" + str(filenum) + ".txt"
         file1 = open(filename, "a")
         message = ""
-
-        watchdog_timer = threading.Timer(10 * 60, watchdog)
-        watchdog_timer.start()
 
         while True:
             # file1 = open("log.txt", "a")   
@@ -104,16 +103,16 @@ def main():
             msg = str(num)
             update_display(enviro.display, msg)
             sleep(30)
-            if (num % 20 == 0):
+            if (num % 30 == 0):
                 file1.write(message)
                 file1.flush()
                 message = ""
-                if num % 100 == 0:
+                if num % 60 == 0:
                     file1.close()
                     filenum += 1
-                    filename = "file" + str(filenum) + ".txt"
+                    filename = "/logFiles/file" + str(filenum) + ".txt"
                     file1 = open(filename, "a")
-
+                    reboot_board()
             sleep(27)
 
             if button.read() == False:
@@ -122,10 +121,7 @@ def main():
                 print("Program Terminated")
                 sleep(2)
                 break
-            
-            watchdog_timer.cancel()
-            watchdog_timer = threading.Timer(10 * 60, watchdog)
-            watchdog_timer.start()
 
 if __name__ == '__main__':
+    sleep(30)
     main()
