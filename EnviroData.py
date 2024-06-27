@@ -25,11 +25,17 @@ from periphery import GPIO, Serial
 import shutil
 
 DEFAULT_CONFIG_LOCATION = os.path.join(os.path.dirname(__file__), 'cloud_config.ini')
+
 def update_display(display, msg):
     with canvas(display) as draw:
         draw.text((0, 0), msg, fill='white')
+
 def _none_to_nan(val):
     return float('nan') if val is None else val
+
+def watchdog():
+    os.system('reboot')
+
 def main():
     # Pull arguments from command line.
     parser = argparse.ArgumentParser(description='Enviro Kit Demo')
@@ -52,8 +58,14 @@ def main():
         flag = True if (input("Inside or Outside (1 or 0): ") == '1') else False
         #file1 = open("log.txt", "a")
         num = 0
-        filenum = 0
+        filenum = 1
+        filename = "file" + str(filenum) + ".txt"
+        file1 = open(filename, "a")
         message = ""
+
+        watchdog_timer = threading.Timer(10 * 60, watchdog)
+        watchdog_timer.start()
+
         while True:
             # file1 = open("log.txt", "a")   
             # file1.write(str(num) + " ")
@@ -93,17 +105,27 @@ def main():
             update_display(enviro.display, msg)
             sleep(30)
             if (num % 50 == 0):
-                filename = "file" + str(filenum) + ".txt"
-                file1 = open(filename, "a")
-                filenum += 1
                 file1.write(message)
-                file1.close()
+                file1.flush()
+                message = ""
+                if filenum % 10 == 0:
+                    file1.close()
+                    filenum += 1
+                    filename = "file" + str(filenum) + ".txt"
+                    file1 = open(filename, "a")
+
             sleep(27)
+            
             if button.read() == False:
                 #file1.close()
                 update_display(enviro.display, "Program Terminated :)")
                 print("Program Terminated")
                 sleep(2)
                 break
+            
+            watchdog_timer.cancel()
+            watchdog_timer = threading.Timer(10 * 60, watchdog)
+            watchdog_timer.start()
+
 if __name__ == '__main__':
     main()
