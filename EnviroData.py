@@ -58,7 +58,7 @@ def main():
         flag = True if (input("Inside or Outside (1 or 0): ") == '1') else False
         #file1 = open("log.txt", "a")
         num = 0
-        filenum = 1
+        filenum = 0
         filename = "file" + str(filenum) + ".txt"
         file1 = open(filename, "a")
         message = ""
@@ -104,18 +104,18 @@ def main():
             msg = str(num)
             update_display(enviro.display, msg)
             sleep(30)
-            if (num % 50 == 0):
+            if (num % 20 == 0):
                 file1.write(message)
                 file1.flush()
                 message = ""
-                if filenum % 10 == 0:
+                if num % 100 == 0:
                     file1.close()
                     filenum += 1
                     filename = "file" + str(filenum) + ".txt"
                     file1 = open(filename, "a")
 
             sleep(27)
-            
+
             if button.read() == False:
                 #file1.close()
                 update_display(enviro.display, "Program Terminated :)")
