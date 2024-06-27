@@ -60,8 +60,7 @@ def main():
         flag = True
         #file1 = open("log.txt", "a")
         num = 0
-        filenum = 0
-        filename = "/home/mendel/logFiles/file" + str(filenum) + ".txt"
+        filename = "/home/mendel/logFiles/file.txt"
         file1 = open(filename, "a")
         message = ""
 
@@ -109,8 +108,7 @@ def main():
                 message = ""
                 if num % 60 == 0:
                     file1.close()
-                    filenum += 1
-                    filename = "/home/mendel/logFiles/file" + str(filenum) + ".txt"
+                    sleep(15)
                     file1 = open(filename, "a")
                     reboot_board()
             sleep(27)
