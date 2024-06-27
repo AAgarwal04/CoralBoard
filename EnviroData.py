@@ -108,8 +108,6 @@ def main():
                 message = ""
                 if num % 60 == 0:
                     file1.close()
-                    sleep(15)
-                    file1 = open(filename, "a")
                     reboot_board()
             sleep(27)
 
