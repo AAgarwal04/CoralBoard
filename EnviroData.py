@@ -1,16 +1,5 @@
-# Copyright 2019 Google LLC
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
+#!/usr/bin/env python3
+
 from coral.enviro.board import EnviroBoard
 from coral.cloudiot.core import CloudIot
 from luma.core.render import canvas
@@ -52,7 +41,7 @@ def main():
     enviro = EnviroBoard()
     button = GPIO("/dev/gpiochip2", 9, "in")
     uart1 = Serial("/dev/ttymxc0", 115200)
-    with CloudIot(args.cloud_config) as cloud:
+    while True:
         # Indefinitely update display and upload to cloud.
         sensors = {}
         read_period = int(args.upload_delay / (2 * args.display_duration))
@@ -74,7 +63,7 @@ def main():
             #msg = 'Temp: %.2f C\n' % _none_to_nan(sensors['temperature'])
             #msg += 'RH: %.2f %%' % _none_to_nan(sensors['humidity'])
             msg = "T: " + str(int(enviro.temperature)) + " R: " + str(int(enviro.humidity)) + " L: " + str(int(enviro.ambient_light)) + '\n'
-            message += "Temp: " + str(int(enviro.temperature)) + " RH: " + str(int(enviro.humidity)) + " "
+            message += str(num) + " Temp: " + str(int(enviro.temperature)) + " RH: " + str(int(enviro.humidity)) + " "
             #file1.write("Temp: " + str(int(enviro.temperature)) + " RH: " + str(int(enviro.humidity)) + " ")
             sensors['ambient_light'] = enviro.ambient_light
             sensors['pressure'] = enviro.pressure
@@ -114,10 +103,11 @@ def main():
             if button.read() == False:
                 #file1.close()
                 update_display(enviro.display, "Program Terminated :)")
-                print("Program Terminated")
+                # print("Program Terminated")
                 sleep(2)
                 break
+        break
 
 if __name__ == '__main__':
-    sleep(30)
+    sleep(10)
     main()
