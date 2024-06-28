@@ -60,7 +60,7 @@ def main():
         while True:
             # file1 = open("log.txt", "a")   
             # file1.write(str(num) + " ")
-            # num += 1
+            num += 1
             # # First display temperature and RH.
             # sensors['temperature'] = enviro.temperature
             # sensors['humidity'] = enviro.humidity
@@ -93,7 +93,7 @@ def main():
             # message += " " + val + "\n"
             # file1.write(" " + val + "\n")
             # update_display(enviro.display, msg)
-            msg = str(get_wifi_networks())
+            msg = str(get_wifi_networks()) + " " + str(num)
             update_display(enviro.display, msg)
             sleep(5)
             # if (num % 30 == 0):
@@ -113,5 +113,5 @@ def main():
         break
 
 if __name__ == '__main__':
-    sleep(10)
+    # sleep(10)
     main()
