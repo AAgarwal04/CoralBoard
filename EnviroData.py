@@ -26,6 +26,21 @@ def _none_to_nan(val):
 def reboot_board():
     subprocess.run(["sudo", "reboot"])
 
+def get_wifi_info():
+    output = subprocess.check_output(['nmcli', '-f', 'SIGNAL', 'dev', 'wifi', 'list'], encoding='utf-8')
+    output = output.split('\n')[1:]
+    output = list(filter(None, output))
+    # output = output[:len(output)-1]
+    signal_strengths = []
+    for line in output:
+        if line[0].isdigit():
+            signal_strengths.append(int(line.strip()))
+    signal_strengths = list(filter(None, signal_strengths))
+    #print(signal_strengths)
+    avg = (sum(signal_strengths)/len(signal_strengths)) if len(signal_strengths) != 0 else 0
+    return len(signal_strengths), avg, max(signal_strengths)
+
+
 def main():
     # Pull arguments from command line.
     parser = argparse.ArgumentParser(description='Enviro Kit Demo')
@@ -46,7 +61,7 @@ def main():
         sensors = {}
         read_period = int(args.upload_delay / (2 * args.display_duration))
         # flag = True if (input("Inside or Outside (1 or 0): ") == '1') else False
-        flag = True
+        flag = False
         #file1 = open("log.txt", "a")
         num = 0
         filename = "/home/mendel/logFiles/file.txt"
@@ -67,11 +82,13 @@ def main():
             #file1.write("Temp: " + str(int(enviro.temperature)) + " RH: " + str(int(enviro.humidity)) + " ")
             sensors['ambient_light'] = enviro.ambient_light
             sensors['pressure'] = enviro.pressure
+            wifiAmnt, wifiAvg, wifiMax = get_wifi_info()
             #msg = 'Light: %.2f lux\n' % _none_to_nan(sensors['ambient_light'])
             #msg += 'Pressure: %.2f kPa' % _none_to_nan(sensors['pressure'])
             uv = ((enviro.grove_analog * 5 /409.6) * 1000 / 4.3) / 21
             msg += " P: " + str(int(enviro.pressure)) + " U: " + str(round(uv,2))
             message += "Light: " + str(int(enviro.ambient_light)) + " Pressure: " + str(int(enviro.pressure)) + " UV: " + str(round(uv, 2))
+            message += " Amnt: " + str(wifiAmnt) + " Avg: " + str(wifiAvg) + " Max: " + str(wifiMax)
             #file1.write("Light: " + str(int(enviro.ambient_light)) + " Pressure: " + str(int(enviro.pressure)) + " UV: " + str(round(uv, 2)))
             #flag = ~flag if (~button.read()) else flag
             #file1.write(" Inside\n" if (flag) else " Outside\n")
@@ -91,11 +108,11 @@ def main():
             msg = str(num)
             update_display(enviro.display, msg)
             sleep(30)
-            if (num % 30 == 0):
+            if (num % 1 == 0):
                 file1.write(message)
                 file1.flush()
                 message = ""
-                if num % 60 == 0:
+                if num % 2 == 0:
                     file1.close()
                     reboot_board()
             sleep(27)
@@ -110,4 +127,9 @@ def main():
 
 if __name__ == '__main__':
     sleep(10)
+    thermFile = "/sys/class/thermal/thermal_zone0/trip_point_4_temp"
+    file = open(thermFile, "w")
+    file.write("25000")
+    file.flush()
+    file.close()
     main()
