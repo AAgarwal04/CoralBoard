@@ -69,7 +69,7 @@ def main():
     # Create instances of EnviroKit and Cloud IoT.
     enviro = EnviroBoard()
     button = GPIO("/dev/gpiochip2", 9, "in")
-    uart1 = Serial("/dev/ttymxc0", 115200)
+    
     while True:
         # Indefinitely update display and upload to cloud.
         sensors = {}
