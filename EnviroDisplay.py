@@ -13,6 +13,9 @@ import keyboard
 from periphery import GPIO, Serial
 import shutil
 import subprocess
+import asyncio
+import warnings
+from bleak import BleakScanner
 
 DEFAULT_CONFIG_LOCATION = os.path.join(os.path.dirname(__file__), 'cloud_config.ini')
 
@@ -26,9 +29,30 @@ def _none_to_nan(val):
 def reboot_board():
     subprocess.run(["sudo", "reboot"])
 
-def get_wifi_networks():
-    output = subprocess.check_output(['nmcli', 'device', 'wifi', 'list'], encoding='utf-8')        
-    return output.count("\n")
+def get_wifi_info():
+    output = subprocess.check_output(['nmcli', '-f', 'SIGNAL', 'dev', 'wifi', 'list'], encoding='utf-8')
+    output = output.split('\n')[1:]
+    output = list(filter(None, output))
+    # output = output[:len(output)-1]
+    signal_strengths = []
+    for line in output:
+        if line[0].isdigit():
+            signal_strengths.append(int(line.strip()))
+    signal_strengths = list(filter(None, signal_strengths))
+    print(signal_strengths)
+    avg = (sum(signal_strengths)/len(signal_strengths)) if len(signal_strengths) != 0 else 0
+    return len(signal_strengths), avg
+
+async def scan_bluetooth():
+    scanner = BleakScanner()
+    devices = await scanner.discover(timeout=3.0)
+    rssiStrength = []
+    for device in devices:
+        rssi = device.rssi if hasattr(device, 'rssi') else "Unknown"
+        rssiStrength.append(rssi)
+    rssiStrength = list(filter(lambda x: x != "Unknown", rssiStrength))
+    return rssiStrength
+
 
 def main():
     # Pull arguments from command line.
@@ -53,8 +77,8 @@ def main():
         flag = True
         #file1 = open("log.txt", "a")
         num = 0
-        filename = "/home/mendel/logFiles/file.txt"
-        file1 = open(filename, "a")
+        # filename = "/home/mendel/logFiles/file.txt"
+        # file1 = open(filename, "a")
         message = ""
 
         while True:
@@ -93,7 +117,13 @@ def main():
             # message += " " + val + "\n"
             # file1.write(" " + val + "\n")
             # update_display(enviro.display, msg)
-            msg = str(get_wifi_networks()) + " " + str(num)
+            # wifiAmnt, wifiStrength = get_wifi_info()
+            # msg = "Count: " + str(num) + " Amnt: " + str(wifiAmnt) + "\nMax Strength: " + str(wifiStrength)
+            warnings.filterwarnings("ignore", category=FutureWarning)
+            scan_results = asyncio.run(scan_bluetooth())
+            amnt, strength, avg = len(scan_results), max(scan_results), sum(scan_results)/len(scan_results)
+            msg = "Count: " + str(num) + " Amnt: " + str(amnt) + "\nMax Strength: " + str(strength) + " Avg: " + str(round(avg, 2))
+            # print(max(scan_results), sum(scan_results)/len(scan_results))
             update_display(enviro.display, msg)
             sleep(5)
             # if (num % 30 == 0):
