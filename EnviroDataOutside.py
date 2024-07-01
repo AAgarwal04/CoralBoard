@@ -13,6 +13,9 @@ import keyboard
 from periphery import GPIO, Serial
 import shutil
 import subprocess
+import asyncio
+import warnings
+from bleak import BleakScanner
 
 DEFAULT_CONFIG_LOCATION = os.path.join(os.path.dirname(__file__), 'cloud_config.ini')
 
@@ -40,6 +43,18 @@ def get_wifi_info():
     avg = (sum(signal_strengths)/len(signal_strengths)) if len(signal_strengths) != 0 else 0
     return len(signal_strengths), avg, max(signal_strengths)
 
+async def scan_bluetooth():
+    scanner = BleakScanner()
+    devices = await scanner.discover(timeout=3.0)
+    rssiStrength = []
+    for device in devices:
+        rssi = device.rssi if hasattr(device, 'rssi') else "Unknown"
+        rssiStrength.append(rssi)
+    rssiStrength = list(filter(lambda x: x != "Unknown", rssiStrength))
+    avg = sum(rssiStrength)/len(rssiStrength) if len(rssiStrength) != 0 else 0
+    return len(rssiStrength), max(rssiStrength), avg
+
+
 
 def main():
     # Pull arguments from command line.
@@ -55,7 +70,7 @@ def main():
     # Create instances of EnviroKit and Cloud IoT.
     enviro = EnviroBoard()
     button = GPIO("/dev/gpiochip2", 9, "in")
-    uart1 = Serial("/dev/ttymxc0", 115200)
+    
     while True:
         # Indefinitely update display and upload to cloud.
         sensors = {}
@@ -86,9 +101,14 @@ def main():
             #msg = 'Light: %.2f lux\n' % _none_to_nan(sensors['ambient_light'])
             #msg += 'Pressure: %.2f kPa' % _none_to_nan(sensors['pressure'])
             uv = ((enviro.grove_analog * 5 /409.6) * 1000 / 4.3) / 21
+
+            warnings.filterwarnings("ignore", category=FutureWarning)
+            bleAmnt, bleMax, bleAvg = asyncio.run(scan_bluetooth())
+
             msg += " P: " + str(int(enviro.pressure)) + " U: " + str(round(uv,2))
             message += "Light: " + str(int(enviro.ambient_light)) + " Pressure: " + str(int(enviro.pressure)) + " UV: " + str(round(uv, 2))
             message += " Amnt: " + str(wifiAmnt) + " Avg: " + str(wifiAvg) + " Max: " + str(wifiMax)
+            message += " BleAmnt: " + str(bleAmnt) + " BleAvg: " + str(bleAvg) + " BleMax: " + str(bleMax)
             #file1.write("Light: " + str(int(enviro.ambient_light)) + " Pressure: " + str(int(enviro.pressure)) + " UV: " + str(round(uv, 2)))
             #flag = ~flag if (~button.read()) else flag
             #file1.write(" Inside\n" if (flag) else " Outside\n")
@@ -107,7 +127,7 @@ def main():
             # update_display(enviro.display, msg)
             msg = str(num)
             update_display(enviro.display, msg)
-            sleep(30)
+            sleep(26)
             if (num % 30 == 0):
                 file1.write(message)
                 file1.flush()
