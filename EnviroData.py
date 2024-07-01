@@ -51,7 +51,8 @@ async def scan_bluetooth():
         rssi = device.rssi if hasattr(device, 'rssi') else "Unknown"
         rssiStrength.append(rssi)
     rssiStrength = list(filter(lambda x: x != "Unknown", rssiStrength))
-    return rssiStrength
+    avg = sum(rssiStrength)/len(rssiStrength) if len(rssiStrength) != 0 else 0
+    return len(rssiStrength), max(rssiStrength), avg
 
 
 def main():
@@ -100,13 +101,12 @@ def main():
             #msg += 'Pressure: %.2f kPa' % _none_to_nan(sensors['pressure'])
             uv = ((enviro.grove_analog * 5 /409.6) * 1000 / 4.3) / 21
             warnings.filterwarnings("ignore", category=FutureWarning)
-            scan_results = asyncio.run(scan_bluetooth())
-            bleAmnt, bleMax, bleAvg = len(scan_results), max(scan_results), sum(scan_results)/len(scan_results)
+            bleAmnt, bleMax, bleAvg = asyncio.run(scan_bluetooth())
 
             msg += " P: " + str(int(enviro.pressure)) + " U: " + str(round(uv,2))
             message += "Light: " + str(int(enviro.ambient_light)) + " Pressure: " + str(int(enviro.pressure)) + " UV: " + str(round(uv, 2))
             message += " WifiAmnt: " + str(wifiAmnt) + " WifiAvg: " + str(wifiAvg) + " WifiMax: " + str(wifiMax)
-            message += " BleAmnt: " + str(bleAmnt) + " WifiAvg: " + str(bleAvg) + " WifiMax: " + str(bleMax)
+            message += " BleAmnt: " + str(bleAmnt) + " BleAvg: " + str(bleAvg) + " BleMax: " + str(bleMax)
             #file1.write("Light: " + str(int(enviro.ambient_light)) + " Pressure: " + str(int(enviro.pressure)) + " UV: " + str(round(uv, 2)))
             #flag = ~flag if (~button.read()) else flag
             #file1.write(" Inside\n" if (flag) else " Outside\n")
