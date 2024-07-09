@@ -71,5 +71,21 @@ history = model.fit(
 )
 
 test_loss, test_accuracy = model.evaluate(test_dataset)
-print(f"Test accuracy: {test_accuracy:.4f}")
+# print(f"Test accuracy: {test_accuracy:.4f}")
+
+lst = [55, 11407, 100, 0.27, 200, 46.275, 95, 111, -77.77477477, -53]
+new_data = np.array(lst)
+
+new_data_scaled = scaler.transform(new_data)
+
+# Make predictions
+predictions = model.predict(new_data_scaled)
+
+# The predictions will be probabilities between 0 and 1
+# If you want binary predictions, you can threshold them:
+binary_predictions = (predictions > 0.5).astype(int)
+
+# Print results
+for i, pred in enumerate(predictions):
+    print(f"Sample {i+1}: Probability = {pred[0]:.4f}, Prediction = {'Inside' if binary_predictions[i][0] == 1 else 'Outside'}")
 
