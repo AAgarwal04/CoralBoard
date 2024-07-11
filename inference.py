@@ -8,7 +8,11 @@ interpreter = edgetpu.make_interpreter('environmentModel_quantized.tflite')
 interpreter.allocate_tensors()
 
 # Prepare input data
+# Prepare input data
 input_data = np.array([[60, 30504, 101, 26, 48.57692308, 77, 39, -81.71794872, -66]], dtype=np.float32)
+
+# Reshape input data to 1D array
+input_data = input_data.reshape(-1)
 
 # Quantize the input data to int8
 input_details = interpreter.get_input_details()[0]
