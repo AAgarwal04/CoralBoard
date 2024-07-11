@@ -3,7 +3,7 @@ from pycoral.utils import edgetpu
 from pycoral.adapters import common
 
 # Load the model
-interpreter = edgetpu.make_interpreter('environmentModel_quantized.tflite')
+interpreter = edgetpu.make_interpreter('your_model_quantized.tflite')
 interpreter.allocate_tensors()
 
 # Prepare input data
