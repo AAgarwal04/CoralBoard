@@ -36,7 +36,7 @@ history = model.fit(
 )
 
 # Save the model and scaler
-model.save('trained_model.h5')
+model.save('environmentModel.h5')
 import joblib
 joblib.dump(scaler, 'scaler.pkl')
 
