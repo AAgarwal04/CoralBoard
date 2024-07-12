@@ -22,4 +22,7 @@ output_data = interpreter.get_tensor(interpreter.get_output_details()[0]['index'
 class_id = np.argmax(output_data)
 score = output_data[0][class_id]
 
-print(f"Class: {class_id}, Score: {score}")
+if class_id == 0:
+    print("Outside")
+else:
+    print("Inside")
