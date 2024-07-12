@@ -1,44 +1,27 @@
 import numpy as np
 from pycoral.utils import edgetpu
+from pycoral.adapters import common
+from pycoral.adapters import classify
 
 # Load the model
-interpreter = edgetpu.make_interpreter('environmentModel_quantized.tflite')
+interpreter = edgetpu.make_interpreter('enviroModel_edgetpu.tflite')
 interpreter.allocate_tensors()
 
-# Get input details
+# Your input array
+input_data = np.array([56, 11192, 100, 0.27, 200, 44.805, 97, 115, -77.70434782608696], dtype=np.float32)
+
+# Reshape and normalize the input if necessary
+input_data = input_data.reshape(1, -1)  # Reshape to (1, 9) for batch size 1
+
 input_details = interpreter.get_input_details()[0]
-input_shape = input_details['shape']
-input_scale, input_zero_point = input_details['quantization']
+if input_details['dtype'] == np.uint8:
+    input_scale, input_zero_point = input_details['quantization']
+    input_data = input_data / input_scale + input_zero_point
+    input_data = input_data.astype(np.uint8)
 
-print(f"Expected input shape: {input_shape}")
+common.set_input(interpreter, input_data)
 
-# Prepare input data
-input_data = np.array([[60, 30504, 101, 26, 48.57692308, 77, 39, -81.71794872, -66]], dtype=np.float32)
-
-# Reshape input data to match expected shape
-input_data = input_data.reshape(input_shape)
-
-# Quantize the input data to int8
-input_data = input_data / input_scale + input_zero_point
-input_data = np.clip(np.round(input_data), -128, 127).astype(np.int8)
-
-print(f"Adjusted input shape: {input_data.shape}")
-print(f"Adjusted input dtype: {input_data.dtype}")
-
-# Set input tensor
-interpreter.set_tensor(input_details['index'], input_data)
-
-# Run inference
 interpreter.invoke()
+output = classify.get_classes(interpreter, top_k=1)[0]
 
-# Get output
-output_details = interpreter.get_output_details()[0]
-output_data = interpreter.get_tensor(output_details['index'])
-
-# Dequantize the output if necessary
-if output_details['dtype'] == np.int8:
-    output_scale, output_zero_point = output_details['quantization']
-    output_data = output_scale * (output_data.astype(np.float32) - output_zero_point)
-
-# Print the result
-print(f"Output: {output_data}")
+print(f"Class: {output.id}, Score: {output.score}")
