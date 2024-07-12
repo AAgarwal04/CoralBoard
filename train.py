@@ -6,7 +6,7 @@ import numpy as np
 import tensorflow as tf
 
 # Load and preprocess data
-df = load_data('/home/aryan/Documents/Coral/Data.xlsx', sheet_name="Combined")
+df = load_data('C:/Users/AgAr082/Documents/Coral/CoralBoard-main/CoralBoard-main/Data/Data.xlsx', sheet_name="Combined")
 # In train_model.py
 X, y = preprocess_data(df, for_training=True)
 

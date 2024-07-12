@@ -3,13 +3,14 @@ import tensorflow as tf
 import joblib
 import numpy as np
 import shap
+import random
 
 # Load the saved model and scaler
 model = tf.keras.models.load_model('environmentModel.h5')
 scaler = joblib.load('scaler.pkl')
 
 # Load and preprocess test data
-df = load_data('/home/aryan/Documents/Coral/Data.xlsx', sheet_name='kidOutside')
+df = load_data('C:/Users/AgAr082/Documents/Coral/CoralBoard-main/CoralBoard-main/Data/Data.xlsx', sheet_name='testInside')
 X = preprocess_data(df, for_training=False)
 
 # Create a SHAP explainer
@@ -17,10 +18,20 @@ explainer = shap.KernelExplainer(model.predict, scaler.transform(X))
 
 # Perform inference on each row
 results = []
-start = 50
+start = 0
 index = start
-while (index - start) < 10:
+
+# randList = []
+# for i in range(0, 50):
+#     n = random.randint(0, len(X))
+#     randList.append(n)
+# print(randList)
+
+# for ind in randList:
+# while (index-start) < 50:
+while index < len(X):
     row = X[index]
+    # row = np.array([[60, 30504, 101, 26, 48.57692308, 77, 39, -81.71794872, -66]], dtype=np.float32)
     row_reshaped = row.reshape(1, -1)
     row_scaled = scaler.transform(row_reshaped)
     prediction = model.predict(row_scaled)
