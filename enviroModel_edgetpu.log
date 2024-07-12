@@ -1,0 +1,8 @@
+Edge TPU Compiler version 16.0.384591198
+Input: enviroModel.tflite
+Output: enviroModel_edgetpu.tflite
+
+Operator                       Count      Status
+
+FULLY_CONNECTED                3          Operation is working on an unsupported data type
+LOGISTIC                       1          Operation is working on an unsupported data type
