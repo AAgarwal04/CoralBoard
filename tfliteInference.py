@@ -1,55 +1,72 @@
+from utils import load_data, preprocess_data
+import tensorflow as tf
+import joblib
 import numpy as np
-from pycoral.utils import edgetpu
-from pycoral.adapters import common
-from pycoral.adapters import classify
 
-# Load the saved EdgeTPU model
-model_path = 'environmentModel_quantized.tflite'
-interpreter = edgetpu.make_interpreter(model_path)
+# Load the saved TFLite model
+interpreter = tf.lite.Interpreter(model_path='environmentModel_quantized.tflite')
 interpreter.allocate_tensors()
 
-# Get input details
+# Get input and output tensors
 input_details = interpreter.get_input_details()
-input_shape = input_details[0]['shape']
-print("Expected input shape:", input_shape)
+output_details = interpreter.get_output_details()
+
+# Load the scaler
+scaler = joblib.load('scaler.pkl')
+
+# Load and preprocess test data
+df = load_data('C:/Users/AgAr082/Documents/Coral/CoralBoard-main/CoralBoard-main/Data/Data.xlsx', sheet_name='testInside')
+X = preprocess_data(df, for_training=False)
 
 X = np.array([
-    [53, 499, 101, 171, 48, 87, 65, -81, -57],
-    [65, 31000, 102, 28, 50, 80, 40, -80, -65],
-    [55, 30000, 100, 24, 47, 75, 38, -83, -67]
+    [53, 499, 101, 171, 48.73099, 87, 65, -81.30676, -57],
+    [54, 422, 101, 154, 48.67, 90, 65, -80.0, -52],
+    [55, 30000, 100, 24, 47.0, 75, 38, -83.0, -67]
 ])
 
+# Define a prediction function
 def predict(X):
+    X_scaled = scaler.transform(X)
     results = []
-    for row in X:
-        # Convert to float32 and reshape
-        input_data = row.astype(np.float32).reshape(1, 9)
+    for row in X_scaled:
+        # Check if the model expects quantized input
+        if input_details[0]['dtype'] == np.uint8 or input_details[0]['dtype'] == np.int8:
+            input_scale, input_zero_point = input_details[0]['quantization']
+            row_quantized = row / input_scale + input_zero_point
+            row_quantized = row_quantized.astype(input_details[0]['dtype'])
+            interpreter.set_tensor(input_details[0]['index'], np.expand_dims(row_quantized, axis=0))
+        else:
+            interpreter.set_tensor(input_details[0]['index'], np.expand_dims(row, axis=0).astype(np.float32))
         
-        # Set the input tensor
-        interpreter.set_tensor(input_details[0]['index'], input_data)
-        
-        # Run inference
         interpreter.invoke()
         
-        # Get the output
-        output_details = interpreter.get_output_details()
-        output_data = interpreter.get_tensor(output_details[0]['index'])
-        results.append(output_data.flatten()[0])  # Flatten and take the first element
+        output = interpreter.get_tensor(output_details[0]['index'])
+        
+        # Dequantize the output if necessary
+        if output_details[0]['dtype'] == np.uint8 or output_details[0]['dtype'] == np.int8:
+            output_scale, output_zero_point = output_details[0]['quantization']
+            output = (output.astype(np.float32) - output_zero_point) * output_scale
+        
+        results.append(output[0])
     return np.array(results)
 
 # Perform inference
-predictions = predict(X)
+start = 0
+end = min(start + 50, len(X))
+X_subset = X[start:end]
+
+predictions = predict(X_subset)
 
 features = ["RH", "Light", "Pressure", "WifiAmnt", "WifiAvg", "WifiMax", "BLEAmnt", "BLEAvg", "BLEMax"]
 
 # Print results
-for i, (row, prediction) in enumerate(zip(X, predictions)):
-    print("Row {}:".format(i+1))
-    print("  Raw Data:")
+for i, (row, prediction) in enumerate(zip(X_subset, predictions)):
+    print(f"Row {i+start+1}:")
+    print(f"  Raw Data:")
     for feature, value in zip(features, row):
-        print("    {}: {}".format(feature, value))
-    print("  Prediction: {}".format('Inside' if prediction > 0.5 else 'Outside'))
-    print("  Probability: {:.4f}".format(prediction))
+        print(f"    {feature}: {value}")
+    print(f"  Prediction: {'Inside' if prediction > 0.5 else 'Outside'}")
+    print(f"  Probability: {prediction[0]:.4f}")
     print()
 
-print("Total predictions made: {}".format(len(predictions)))
+print(f"Total predictions made: {len(predictions)}")
