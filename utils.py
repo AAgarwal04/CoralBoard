@@ -2,6 +2,7 @@ import os
 os.environ['TF_CPP_MIN_LOG_LEVEL'] = '2'
 
 import tensorflow as tf
+from tensorflow.keras.layers import LeakyReLU
 import numpy as np
 import pandas as pd
 
@@ -32,10 +33,21 @@ def preprocess_data(df, for_training=True, nrows=None):
 
 def create_model():
     model = tf.keras.Sequential([
-        tf.keras.layers.Dense(64, activation='relu', input_shape=(9,)),
+        tf.keras.layers.Dense(128, activation='relu', input_shape=(9,)),
+        tf.keras.layers.Dropout(0.15),
+        tf.keras.layers.Dense(256),
+        tf.keras.layers.LeakyReLU(alpha=0.01),
+        tf.keras.layers.Dropout(0.15),
+        tf.keras.layers.Dense(256, activation='relu'),
+        tf.keras.layers.Dropout(0.10),
+        tf.keras.layers.Dense(128),
+        tf.keras.layers.LeakyReLU(alpha=0.01),
+        tf.keras.layers.Dropout(0.10),
+        tf.keras.layers.Dense(64, activation='relu'),
+        tf.keras.layers.Dropout(0.15),
         tf.keras.layers.Dense(32, activation='relu'),
+        tf.keras.layers.Dropout(0.15),
         tf.keras.layers.Dense(16, activation='relu'),
-        tf.keras.layers.Dense(8, activation='relu'),
         tf.keras.layers.Dense(1, activation='sigmoid')
     ])
     model.compile(

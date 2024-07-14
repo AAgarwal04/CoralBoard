@@ -12,7 +12,7 @@ with open('environmentModel.tflite', 'wb') as f:
   f.write(tflite_model)
 
 # Load the Excel file
-excel_path = 'C:/Users/AgAr082/Documents/Coral/CoralBoard-main/CoralBoard-main/Data/Data.xlsx'
+excel_path = 'Data/Data.xlsx'
 df = pd.read_excel(excel_path)
 
 # Select the 9 columns you want to use
