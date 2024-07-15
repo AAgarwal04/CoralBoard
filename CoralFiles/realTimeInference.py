@@ -18,6 +18,9 @@ import subprocess
 import asyncio
 import warnings
 from bleak import BleakScanner
+import warnings
+
+warnings.filterwarnings("ignore", message="BLEDevice.rssi is deprecated", category=FutureWarning)
 
 DEFAULT_CONFIG_LOCATION = os.path.join(os.path.dirname(__file__), 'cloud_config.ini')
 
@@ -40,12 +43,11 @@ async def scan_bluetooth():
     devices = await scanner.discover(timeout=3.0)
     rssiStrength = []
     for device in devices:
-        # Use the new recommended way to access RSSI
-        rssi = device.advertisement.rssi if device.advertisement else "Unknown"
+        rssi = device.rssi if hasattr(device, 'rssi') else "Unknown"
         rssiStrength.append(rssi)
     rssiStrength = list(filter(lambda x: x != "Unknown", rssiStrength))
     avg = sum(rssiStrength)/len(rssiStrength) if len(rssiStrength) != 0 else 0
-    return len(rssiStrength), max(rssiStrength) if rssiStrength else 0, avg
+    return len(rssiStrength), max(rssiStrength), avg
 
 # Load the saved EdgeTPU model
 model_path = 'environmentModel_edgetpu.tflite'
