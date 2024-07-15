@@ -111,7 +111,8 @@ def main():
             print("  Raw Data:")
             for feature, value in zip(features, row):
                 print("    {}: {}".format(feature, value))
-            print("  Prediction: {}".format('Inside' if prediction > 0.5 else 'Outside'))
+            outcome = 'Inside' if prediction > 0.5 else 'Outside'
+            print("  Prediction: {}".format(outcome))
             print("  Probability: {:.4f}".format(prediction))
             print()
 
@@ -120,4 +121,9 @@ def main():
         sleep(10)
 
 if __name__ == '__main__':
+    thermFile = "/sys/class/thermal/thermal_zone0/trip_point_4_temp"
+    file = open(thermFile, "w")
+    file.write("20000")
+    file.flush()
+    file.close()
     main()
