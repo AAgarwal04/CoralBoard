@@ -47,7 +47,7 @@ async def scan_bluetooth():
     return len(rssiStrength), max(rssiStrength), avg
 
 # Load the saved EdgeTPU model
-model_path = 'environmentModel_quantized.tflite'
+model_path = 'environmentModel_edgetpu.tflite'
 interpreter = edgetpu.make_interpreter(model_path)
 interpreter.allocate_tensors()
 
@@ -117,7 +117,7 @@ def main():
 
         print("Total predictions made: {}".format(len(predictions)))
 
-        sleep(30)
+        sleep(10)
 
 if __name__ == '__main__':
     main()
