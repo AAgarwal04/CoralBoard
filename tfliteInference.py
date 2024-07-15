@@ -18,9 +18,9 @@ scaler = joblib.load('scaler.pkl')
 df = load_data('Data/Data.xlsx', sheet_name='testInside')
 X = preprocess_data(df, for_training=False)
 
-X = np.array([
-    [62, 45, 101, 107, 41.1402, 90, 56, -79.393, -55]
-])
+# X = np.array([
+#     [62, 45, 101, 107, 41.1402, 90, 56, -79.393, -55]
+# ])
 
 # Define a prediction function
 def predict(X):
