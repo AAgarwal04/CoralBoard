@@ -119,7 +119,7 @@ def main():
 
         update_display(enviro.display, outcome)
 
-        sleep(10)
+        sleep(3)
         num += 1
 
 if __name__ == '__main__':
