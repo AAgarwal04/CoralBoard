@@ -8,12 +8,8 @@ from luma.core.render import canvas
 from PIL import ImageDraw
 from time import sleep
 import argparse
-import itertools
-import threading
 import os
-import keyboard
 from periphery import GPIO, Serial
-import shutil
 import subprocess
 import asyncio
 import warnings
@@ -23,6 +19,10 @@ import warnings
 warnings.filterwarnings("ignore", message="BLEDevice.rssi is deprecated", category=FutureWarning)
 
 DEFAULT_CONFIG_LOCATION = os.path.join(os.path.dirname(__file__), 'cloud_config.ini')
+
+def update_display(display, msg):
+    with canvas(display) as draw:
+        draw.text((0, 0), msg, fill='white')
 
 def get_wifi_info():
     output = subprocess.check_output(['nmcli', '-f', 'SIGNAL', 'dev', 'wifi', 'list'], encoding='utf-8')
@@ -60,22 +60,23 @@ input_shape = input_details[0]['shape']
 print("Expected input shape:", input_shape)
 
 def predict(X):
-    results = []
-    for row in X:
-        # Convert to float32 and reshape
-        input_data = row.astype(np.float32).reshape(1, 9)
-        
-        # Set the input tensor
-        interpreter.set_tensor(input_details[0]['index'], input_data)
-        
-        # Run inference
-        interpreter.invoke()
-        
-        # Get the output
-        output_details = interpreter.get_output_details()
-        output_data = interpreter.get_tensor(output_details[0]['index'])
-        results.append(output_data.flatten()[0])  # Flatten and take the first element
-    return np.array(results)
+    # Ensure X is a 2D array
+    if X.ndim == 1:
+        X = X.reshape(1, -1)
+    
+    # Convert to float32
+    input_data = X.astype(np.float32)
+    
+    # Set the input tensor
+    interpreter.set_tensor(input_details[0]['index'], input_data)
+    
+    # Run inference
+    interpreter.invoke()
+    
+    # Get the output
+    output_details = interpreter.get_output_details()
+    output_data = interpreter.get_tensor(output_details[0]['index'])
+    return output_data.flatten()[0]  # Flatten and take the first element
 
 
 def main():
@@ -92,36 +93,34 @@ def main():
     # Create instances of EnviroKit and Cloud IoT.
     enviro = EnviroBoard()
     button = GPIO("/dev/gpiochip2", 9, "in")
+    num = 0
 
     while True:
         wifiAmnt, wifiAvg, wifiMax = get_wifi_info()
         bleAmnt, bleMax, bleAvg = asyncio.run(scan_bluetooth())
         X = np.array([
-            [int(enviro.humidity), int(enviro.ambient_light), int(enviro.pressure), 
-             wifiAmnt, wifiAvg, wifiMax, 
-             bleAmnt, bleAvg, bleMax]
+            int(enviro.humidity), int(enviro.ambient_light), int(enviro.pressure), 
+            wifiAmnt, wifiAvg, wifiMax, 
+            bleAmnt, bleAvg, bleMax
         ])
 
         # Perform inference
-        predictions = predict(X)
+        prediction = predict(X)
         features = ["RH", "Light", "Pressure", "WifiAmnt", "WifiAvg", "WifiMax", "BLEAmnt", "BLEAvg", "BLEMax"]
 
-
-
         # Print results
-        for i, (row, prediction) in enumerate(zip(X, predictions)):
-            print("Row {}:".format(i+1))
-            print("  Raw Data:")
-            for feature, value in zip(features, row):
-                print("    {}: {}".format(feature, value))
-            outcome = 'Inside' if prediction > 0.5 else 'Outside'
-            print("  Prediction: {}".format(outcome))
-            print("  Probability: {:.4f}".format(prediction))
-            print()
+        print("Row {}:".format(num))
+        print("  Raw Data:")
+        for feature, value in zip(features, X):
+            print("    {}: {}".format(feature, value))
+        outcome = 'Inside' if prediction > 0.5 else 'Outside'
+        print("  Prediction: {}".format(outcome))
+        print("  Probability: {:.4f}".format(prediction))
 
-        print("Total predictions made: {}".format(len(predictions)))
+        update_display(enviro.display, outcome)
 
         sleep(10)
+        num += 1
 
 if __name__ == '__main__':
     thermFile = "/sys/class/thermal/thermal_zone0/trip_point_4_temp"
