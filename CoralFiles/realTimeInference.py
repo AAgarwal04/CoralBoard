@@ -117,7 +117,7 @@ def main():
         # print("  Prediction: {}".format(outcome))
         # print("  Probability: {:.4f}".format(prediction))
 
-        update_display(enviro.display, outcome)
+        update_display(enviro.display, str(num) + ": " + outcome)
 
         sleep(3)
         num += 1
