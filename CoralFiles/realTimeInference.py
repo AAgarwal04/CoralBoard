@@ -57,7 +57,7 @@ interpreter.allocate_tensors()
 # Get input details
 input_details = interpreter.get_input_details()
 input_shape = input_details[0]['shape']
-print("Expected input shape:", input_shape)
+# print("Expected input shape:", input_shape)
 
 def predict(X):
     # Ensure X is a 2D array
