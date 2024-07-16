@@ -4,6 +4,6 @@ Output: environmentModel_edgetpu.tflite
 
 Operator                       Count      Status
 
-FULLY_CONNECTED                8          Operation is working on an unsupported data type
 LOGISTIC                       1          Operation is working on an unsupported data type
+FULLY_CONNECTED                8          Operation is working on an unsupported data type
 LEAKY_RELU                     2          Operation is working on an unsupported data type
