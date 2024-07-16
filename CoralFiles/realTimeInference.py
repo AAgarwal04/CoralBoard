@@ -50,7 +50,7 @@ async def scan_bluetooth():
     return len(rssiStrength), max(rssiStrength), avg
 
 # Load the saved EdgeTPU model
-model_path = 'environmentModel_edgetpu.tflite'
+model_path = '/home/mendel/CoralFiles/environmentModel_edgetpu.tflite'
 interpreter = edgetpu.make_interpreter(model_path)
 interpreter.allocate_tensors()
 
@@ -123,9 +123,10 @@ def main():
         num += 1
 
 if __name__ == '__main__':
-    thermFile = "/sys/class/thermal/thermal_zone0/trip_point_4_temp"
-    file = open(thermFile, "w")
-    file.write("20000")
-    file.flush()
-    file.close()
+    sleep(10)
+    # thermFile = "/sys/class/thermal/thermal_zone0/trip_point_4_temp"
+    # file = open(thermFile, "w")
+    # file.write("20000")
+    # file.flush()
+    # file.close()
     main()
