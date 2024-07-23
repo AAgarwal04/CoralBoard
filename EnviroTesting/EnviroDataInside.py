@@ -41,7 +41,10 @@ def get_wifi_info():
     signal_strengths = list(filter(None, signal_strengths))
     #print(signal_strengths)
     avg = (sum(signal_strengths)/len(signal_strengths)) if len(signal_strengths) != 0 else 0
-    return len(signal_strengths), avg, max(signal_strengths)
+    if (len(signal_strengths) == 0):
+        return 0, 0, 0
+    else:
+        return len(signal_strengths), avg, max(signal_strengths)
 
 async def scan_bluetooth():
     scanner = BleakScanner()
@@ -52,7 +55,10 @@ async def scan_bluetooth():
         rssiStrength.append(rssi)
     rssiStrength = list(filter(lambda x: x != "Unknown", rssiStrength))
     avg = sum(rssiStrength)/len(rssiStrength) if len(rssiStrength) != 0 else 0
-    return len(rssiStrength), max(rssiStrength), avg
+    if (len(rssiStrength) == 0):
+        return 0, 0, 0
+    else:
+        return len(rssiStrength), max(rssiStrength), avg
 
 
 
@@ -146,7 +152,7 @@ def main():
         break
 
 if __name__ == '__main__':
-    sleep(10)
+    sleep(5)
     thermFile = "/sys/class/thermal/thermal_zone0/trip_point_4_temp"
     file = open(thermFile, "w")
     file.write("25000")
