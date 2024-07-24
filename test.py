@@ -1,62 +1,65 @@
 from utils import load_data, preprocess_data
-import tensorflow as tf
 import joblib
 import numpy as np
-import shap
-import random
+from pycoral.utils.edgetpu import make_interpreter
+from pycoral.adapters.common import input_size, set_input
+from pycoral.adapters.classify import get_classes
 
-# Load the saved model and scaler
-model = tf.keras.models.load_model('environmentModel.h5')
+# Load the saved TFLite model
+interpreter = make_interpreter('environmentModel_quantized.tflite')
+interpreter.allocate_tensors()
+
+# Get input and output details
+input_details = interpreter.get_input_details()
+output_details = interpreter.get_output_details()
+
+# Load the scaler
 scaler = joblib.load('scaler.pkl')
 
-# Load and preprocess test data
-df = load_data('Data/Data.xlsx', sheet_name='testOutside')
-X = preprocess_data(df, for_training=False)
+# Define your NumPy array
+X = np.array([
+    [55, 1293, 159, 46.874, 92, 94, -78.095, -40]
+])
 
-# Create a SHAP explainer
-explainer = shap.KernelExplainer(model.predict, scaler.transform(X))
+# Define a prediction function
+def predict(X):
+    X_scaled = scaler.transform(X)
+    results = []
+    for row in X_scaled:
+        # Check if the model expects quantized input
+        if input_details[0]['dtype'] == np.uint8 or input_details[0]['dtype'] == np.int8:
+            input_scale, input_zero_point = input_details[0]['quantization']
+            row_quantized = row / input_scale + input_zero_point
+            row_quantized = row_quantized.astype(input_details[0]['dtype'])
+            set_input(interpreter, row_quantized)
+        else:
+            set_input(interpreter, row.astype(np.float32))
+        
+        interpreter.invoke()
+        
+        output = interpreter.get_tensor(output_details[0]['index'])
+        
+        # Dequantize the output if necessary
+        if output_details[0]['dtype'] == np.uint8 or output_details[0]['dtype'] == np.int8:
+            output_scale, output_zero_point = output_details[0]['quantization']
+            output = (output.astype(np.float32) - output_zero_point) * output_scale
+        
+        results.append(output[0])
+    return np.array(results)
 
-# Perform inference on each row
-results = []
-start = 0
-index = start
+# Perform inference
+predictions = predict(X)
 
-randList = []
-for i in range(0, 5):
-    n = random.randint(0, len(X))
-    randList.append(n)
-print(randList)
-
-for ind in randList:
-# while (index-start) < 50:
-# while index < len(X):
-    row = X[index]
-    # row = np.array([[60, 30504, 101, 26, 48.57692308, 77, 39, -81.71794872, -66]], dtype=np.float32)
-    row_reshaped = row.reshape(1, -1)
-    row_scaled = scaler.transform(row_reshaped)
-    prediction = model.predict(row_scaled)
-    binary_prediction = (prediction > 0.5).astype(int)
-    shap_values = explainer.shap_values(row_scaled)
-    results.append({
-        'raw_data': row,
-        'probability': prediction[0][0],
-        'prediction': 'Inside' if binary_prediction[0][0] == 1 else 'Outside',
-        'shap_values': shap_values[0]
-    })
-    index += 1
-
-features = ["RH", "Light",	
-            "Pressure",	
-            "WifiAmnt",	"WifiAvg", "WifiMax", "BLEAmnt", "BLEAvg", "BLEMax"]
-
+features = ["RH", "Light", "WifiAmnt", "WifiAvg", "WifiMax", "BLEAmnt", "BLEAvg", "BLEMax"]
 
 # Print results
-for i, result in enumerate(results):
+for i, (row, prediction) in enumerate(zip(X, predictions)):
     print(f"Row {i+1}:")
-    print(f"  Prediction: {result['prediction']}")
-    print(f"  Probability: {result['probability']:.4f}")
-    print("  SHAP Values:")
-    shap_values = result['shap_values']
-    for j, value in enumerate(shap_values):
-        print(f"    {features[j]}: {value}")
+    print(f"  Raw Data:")
+    for feature, value in zip(features, row):
+        print(f"    {feature}: {value}")
+    print(f"  Prediction: {'Inside' if prediction > 0.5 else 'Outside'}")
+    print(f"  Probability: {prediction[0]:.4f}")
     print()
+
+print(f"Total predictions made: {len(predictions)}")
