@@ -101,7 +101,6 @@ def main():
     while True:
         # Indefinitely update display and upload to cloud.
         sensors = {}
-        read_period = int(args.upload_delay / (2 * args.display_duration))
         # flag = True if (input("Inside or Outside (1 or 0): ") == '1') else False
         num = 0
 
@@ -123,6 +122,8 @@ def main():
             msg = " ".join(input_data)
             print(msg)
             print(f"Prediction: {prediction}")
+            num += 1
+            sleep(5)
 
     
     # # Example input data
