@@ -2,18 +2,19 @@ import numpy as np
 from pycoral.utils.edgetpu import make_interpreter
 from pycoral.adapters.common import input_details, output_details, set_input_tensor
 
-# Load the pre-quantized TFLite model
-interpreter = make_interpreter('environmentModel_quantized.tflite')
+# Load the Edge TPU compiled model
+interpreter = make_interpreter('environmentModel_edgetpu.tflite')
 interpreter.allocate_tensors()
 
 # Get input and output details
 input_details = input_details(interpreter)
 output_details = output_details(interpreter)
 
-# Define your input data (assuming it's already in the correct format)
+# Define your input data
+# This should be scaled and quantized to match what the model expects
 X = np.array([
-    [55, 1293, 159, 47, 92, 94, -78, -40]
-], dtype=np.int8)  # Assuming int8 quantization
+    [55, 127, 100, 47, 92, 94, -78, -40]
+], dtype=np.int8)  # Ensure this matches your model's expected input
 
 def predict(X):
     # Set the input tensor
@@ -24,6 +25,11 @@ def predict(X):
 
     # Get the output
     output = interpreter.get_tensor(output_details['index'])
+
+    # If the output is quantized, you might need to dequantize it
+    if output_details['quantization'] != (0.0, 0):
+        scale, zero_point = output_details['quantization']
+        output = (output.astype(np.float32) - zero_point) * scale
 
     return output
 
