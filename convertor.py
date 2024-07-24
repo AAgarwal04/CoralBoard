@@ -16,7 +16,9 @@ excel_path = 'Data/Data.xlsx'
 df = pd.read_excel(excel_path)
 
 # Select the 9 columns you want to use
-feature_columns = ['RH', 'Light', 'Pressure', 'WifiAmnt', 'WifiAvg', 'WifiMax', 'BLEAmnt', 'BLEAvg', 'BLEMax']
+feature_columns = ['RH', 'Light', 
+                #    'Pressure', 
+                   'WifiAmnt', 'WifiAvg', 'WifiMax', 'BLEAmnt', 'BLEAvg', 'BLEMax']
 df_selected = df[feature_columns]
 
 # Normalize the data

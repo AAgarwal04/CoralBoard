@@ -15,11 +15,13 @@ output_details = interpreter.get_output_details()
 scaler = joblib.load('scaler.pkl')
 
 # Load and preprocess test data
-df = load_data('Data/Data.xlsx', sheet_name='testInside')
+df = load_data('Data/Data.xlsx', sheet_name='testOutside')
 X = preprocess_data(df, for_training=False)
 
 # X = np.array([
-#     [62, 45, 101, 107, 41.1402, 90, 56, -79.393, -55]
+#     [53, 499, 101, 171, 48.73099, 87, 65, -81.30676, -57],
+#     [54, 422, 101, 154, 48.67, 90, 65, -80.0, -52],
+#     [55, 30000, 100, 24, 47.0, 75, 38, -83.0, -67]
 # ])
 
 # Define a prediction function
@@ -55,7 +57,9 @@ X_subset = X[start:end]
 
 predictions = predict(X_subset)
 
-features = ["RH", "Light", "Pressure", "WifiAmnt", "WifiAvg", "WifiMax", "BLEAmnt", "BLEAvg", "BLEMax"]
+features = ["RH", "Light", 
+            # "Pressure", 
+            "WifiAmnt", "WifiAvg", "WifiMax", "BLEAmnt", "BLEAvg", "BLEMax"]
 
 # Print results
 for i, (row, prediction) in enumerate(zip(X_subset, predictions)):

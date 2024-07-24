@@ -14,7 +14,9 @@ def load_data(file_path, sheet_name, skip_rows=0, nrows=None):
     return df
 
 def preprocess_data(df, for_training=True, nrows=None):
-    feature_columns = ['RH', 'Light', 'Pressure', 'WifiAmnt', 'WifiAvg', 'WifiMax', 'BLEAmnt', 'BLEAvg', 'BLEMax']
+    feature_columns = ['RH', 'Light', 
+                    #    'Pressure',
+                        'WifiAmnt', 'WifiAvg', 'WifiMax', 'BLEAmnt', 'BLEAvg', 'BLEMax']
     available_columns = df.columns.intersection(feature_columns)
     
     if nrows is not None:
@@ -33,13 +35,13 @@ def preprocess_data(df, for_training=True, nrows=None):
 
 def create_model():
     model = tf.keras.Sequential([
-        tf.keras.layers.Dense(128, activation='relu', input_shape=(9,)),
+        tf.keras.layers.Dense(128, activation='relu', input_shape=(8,)),    #Change to 9 if using pressure as well
         tf.keras.layers.Dropout(0.15),
         tf.keras.layers.Dense(256),
         tf.keras.layers.LeakyReLU(alpha=0.01),
         tf.keras.layers.Dropout(0.15),
-        tf.keras.layers.Dense(256, activation='relu'),
-        tf.keras.layers.Dropout(0.10),
+        # tf.keras.layers.Dense(256, activation='relu'),
+        # tf.keras.layers.Dropout(0.10),
         tf.keras.layers.Dense(128),
         tf.keras.layers.LeakyReLU(alpha=0.01),
         tf.keras.layers.Dropout(0.10),

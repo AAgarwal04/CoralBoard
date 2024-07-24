@@ -18,9 +18,9 @@ library(ggeasy)
 cl = makePSOCKcluster(detectCores() - 1) # detectCores() will detect the number of cores from your computer. convention to leave 1 core for OS
 registerDoParallel(cl)
 
-dataOG <- read_excel("C:/Users/AgAr082/Documents/CoralBoard/CoralBoard-main/CoralBoard-main/Data/Data.xlsx")
+dataOG <- read_excel("C:/Users/AgAr082/Documents/Coral/CoralBoard-main/CoralBoard-main/Data/Data.xlsx")
 View(dataOG)
-data <- select(dataOG, -Temp, -Inside, -UV)
+data <- select(dataOG, -Inside, -Temp, -UV, -Pressure)
 outcome = "Location"
 head(data)
 set.seed(100)
@@ -34,7 +34,7 @@ data.train$Location <- factor(data.train$Location)
 
 # Create the tuning grid for ranger
 tuneGrid = expand.grid(
-  mtry = 1:10,
+  mtry = 1:9,
   splitrule = "gini",
   min.node.size = 6:9
 )
@@ -65,7 +65,7 @@ registerDoSEQ()
 # Get variable importance using ranger package
 rf_model <- ranger(Location ~ ., data = data.train, importance = "impurity")
 imp <- data.frame(importance = rf_model$variable.importance, 
-                  variable = names(data.train)[1:9])
+                  variable = names(data.train)[1:8])
 imp <- imp %>% arrange(desc(importance))
 
 # Plot variable importance with optimal mtry and min.node.size values
@@ -74,7 +74,8 @@ ggplot(imp) +
   labs(title = "Variable Importance with Optimal mtry and min.node.size Values",
        x = "Inputs",
        y = "Relative Importance") +
-  ggeasy::easy_center_title()
+  ggeasy::easy_center_title() + 
+  coord_flip()
 
 # Print optimal mtry and min.node.size values
 print(paste("Optimal mtry:", maxVal$mtry))

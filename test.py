@@ -10,7 +10,7 @@ model = tf.keras.models.load_model('environmentModel.h5')
 scaler = joblib.load('scaler.pkl')
 
 # Load and preprocess test data
-df = load_data('Data/Data.xlsx', sheet_name='testInside')
+df = load_data('Data/Data.xlsx', sheet_name='testOutside')
 X = preprocess_data(df, for_training=False)
 
 # Create a SHAP explainer
@@ -21,15 +21,15 @@ results = []
 start = 0
 index = start
 
-# randList = []
-# for i in range(0, 20):
-#     n = random.randint(0, len(X))
-#     randList.append(n)
-# print(randList)
+randList = []
+for i in range(0, 5):
+    n = random.randint(0, len(X))
+    randList.append(n)
+print(randList)
 
-# for ind in randList:
+for ind in randList:
 # while (index-start) < 50:
-while index < len(X):
+# while index < len(X):
     row = X[index]
     # row = np.array([[60, 30504, 101, 26, 48.57692308, 77, 39, -81.71794872, -66]], dtype=np.float32)
     row_reshaped = row.reshape(1, -1)
@@ -45,7 +45,9 @@ while index < len(X):
     })
     index += 1
 
-features = ["RH", "Light",	"Pressure",	"WifiAmnt",	"WifiAvg", "WifiMax", "BLEAmnt", "BLEAvg", "BLEMax"]
+features = ["RH", "Light",	
+            "Pressure",	
+            "WifiAmnt",	"WifiAvg", "WifiMax", "BLEAmnt", "BLEAvg", "BLEMax"]
 
 
 # Print results
