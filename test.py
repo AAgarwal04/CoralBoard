@@ -1,50 +1,25 @@
 import numpy as np
-from pycoral.utils.edgetpu import make_interpreter
-from pycoral.adapters.common import input_details, output_details, set_input_tensor
+from pycoral.utils import edgetpu
 
-# Load the Edge TPU compiled model
-interpreter = make_interpreter('environmentModel_edgetpu.tflite')
+# Load model and prepare interpreter
+interpreter = edgetpu.make_interpreter('environmentModel_edgetpu.tflite')
 interpreter.allocate_tensors()
 
-# Get input and output details
-input_details = input_details(interpreter)
-output_details = output_details(interpreter)
+# Prepare input data
+input_data = np.array([43, 1354, 139, 46.338, 82, 78, -79.967, -38], dtype=np.float32)
+input_details = interpreter.get_input_details()[0]
+input_data = input_data.reshape(input_details['shape'])
 
-# Define your input data
-# This should be scaled and quantized to match what the model expects
-X = np.array([
-    [55, 127, 100, 47, 92, 94, -78, -40]
-], dtype=np.int8)  # Ensure this matches your model's expected input
+# Ensure input data is of type FLOAT32
+input_data = input_data.astype(np.float32)
 
-def predict(X):
-    # Set the input tensor
-    set_input_tensor(interpreter, X)
+# Run inference
+interpreter.set_tensor(input_details['index'], input_data)
+interpreter.invoke()
 
-    # Run inference
-    interpreter.invoke()
+# Get output
+output_data = interpreter.get_tensor(interpreter.get_output_details()[0]['index'])
+class_id = np.argmax(output_data)
+score = output_data[0][class_id]
 
-    # Get the output
-    output = interpreter.get_tensor(output_details['index'])
-
-    # If the output is quantized, you might need to dequantize it
-    if output_details['quantization'] != (0.0, 0):
-        scale, zero_point = output_details['quantization']
-        output = (output.astype(np.float32) - zero_point) * scale
-
-    return output
-
-# Perform inference
-predictions = predict(X)
-
-# Print results
-features = ["RH", "Light", "WifiAmnt", "WifiAvg", "WifiMax", "BLEAmnt", "BLEAvg", "BLEMax"]
-for i, (row, prediction) in enumerate(zip(X, predictions)):
-    print(f"Row {i+1}:")
-    print(f"  Raw Data:")
-    for feature, value in zip(features, row):
-        print(f"    {feature}: {value}")
-    print(f"  Prediction: {'Inside' if prediction > 0.5 else 'Outside'}")
-    print(f"  Probability: {prediction[0]:.4f}")
-    print()
-
-print(f"Total predictions made: {len(predictions)}")
+print(f"Class: {class_id}, Score: {score}")
