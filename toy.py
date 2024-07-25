@@ -3,29 +3,24 @@ from tflite_runtime.interpreter import load_delegate
 import numpy as np
 import joblib
 
-# Load the saved TFLite model with Edge TPU delegate
-edgetpu_delegate = load_delegate('libedgetpu.so.1')
-interpreter = Interpreter(
-    model_path='environmentModel_quantized_edgetpu.tflite',
-    experimental_delegates=[edgetpu_delegate])
-interpreter.allocate_tensors()
+def load_model(model_path):
+    edgetpu_delegate = load_delegate('libedgetpu.so.1')
+    interpreter = Interpreter(
+        model_path=model_path,
+        experimental_delegates=[edgetpu_delegate])
+    interpreter.allocate_tensors()
+    return interpreter
 
-# Get input and output tensors
-input_details = interpreter.get_input_details()
-output_details = interpreter.get_output_details()
+def load_scaler(scaler_path):
+    return joblib.load(scaler_path)
 
-# Load the scaler
-scaler = joblib.load('scaler.pkl')
+def preprocess_data(scaler, X):
+    return scaler.transform(X)
 
-# Load and preprocess test data
-X = np.array([
-    [53, 499, 171, 48, 87, 65, -81, -57],
-    [65, 31000, 28, 50, 80, 40, -80, -65],
-    [55, 30000, 24, 47, 75, 38, -83, -67]
-])
-
-def predict(X):
-    X_scaled = scaler.transform(X)
+def predict(interpreter, scaler, X):
+    input_details = interpreter.get_input_details()
+    output_details = interpreter.get_output_details()
+    X_scaled = preprocess_data(scaler, X)
     results = []
     for row in X_scaled:
         input_scale, input_zero_point = input_details[0]['quantization']
@@ -43,23 +38,40 @@ def predict(X):
         results.append(output[0])
     return np.array(results)
 
-# Perform inference
-start = 0
-end = min(start + 50, len(X))
-X_subset = X[start:end]
+def main():
+    # Load the model and scaler
+    model_path = 'environmentModel_quantized_edgetpu.tflite'
+    scaler_path = 'scaler.pkl'
+    interpreter = load_model(model_path)
+    scaler = load_scaler(scaler_path)
 
-predictions = predict(X_subset)
+    # Load and preprocess test data
+    X = np.array([
+        [53, 499, 171, 48, 87, 65, -81, -57],
+        [65, 31000, 28, 50, 80, 40, -80, -65],
+        [55, 30000, 24, 47, 75, 38, -83, -67]
+    ])
 
-features = ["RH", "Light", "WifiAmnt", "WifiAvg", "WifiMax", "BLEAmnt", "BLEAvg", "BLEMax"]
+    # Perform inference
+    start = 0
+    end = min(start + 50, len(X))
+    X_subset = X[start:end]
 
-# Print results
-for i, (row, prediction) in enumerate(zip(X_subset, predictions)):
-    print(f"Row {i+start+1}:")
-    print(f"  Raw Data:")
-    for feature, value in zip(features, row):
-        print(f"    {feature}: {value}")
-    print(f"  Prediction: {'Inside' if prediction > 0.5 else 'Outside'}")
-    print(f"  Probability: {prediction[0]:.4f}")
-    print()
+    predictions = predict(interpreter, scaler, X_subset)
 
-print(f"Total predictions made: {len(predictions)}")
+    features = ["RH", "Light", "WifiAmnt", "WifiAvg", "WifiMax", "BLEAmnt", "BLEAvg", "BLEMax"]
+
+    # Print results
+    for i, (row, prediction) in enumerate(zip(X_subset, predictions)):
+        print(f"Row {i+start+1}:")
+        print(f"  Raw Data:")
+        for feature, value in zip(features, row):
+            print(f"    {feature}: {value}")
+        print(f"  Prediction: {'Inside' if prediction > 0.5 else 'Outside'}")
+        print(f"  Probability: {prediction[0]:.4f}")
+        print()
+
+    print(f"Total predictions made: {len(predictions)}")
+
+if __name__ == "__main__":
+    main()
