@@ -34,18 +34,22 @@ def preprocess_data(df, for_training=True, nrows=None):
         return X
 
 def create_model():
+    l2_regularizer = tf.keras.regularizers.l2(0.01)  # You can adjust the regularization factor as needed
+
     model = tf.keras.Sequential([
-        tf.keras.layers.Dense(128, activation='relu', input_shape=(8,)),
-        tf.keras.layers.Dense(256, activation='relu'),
-        tf.keras.layers.Dense(128, activation='relu'),
-        tf.keras.layers.Dense(64, activation='relu'),
-        tf.keras.layers.Dense(32, activation='relu'),
-        tf.keras.layers.Dense(16, activation='relu'),
-        tf.keras.layers.Dense(1, activation='sigmoid')
+        tf.keras.layers.Dense(128, activation='relu', input_shape=(8,), kernel_regularizer=l2_regularizer),
+        tf.keras.layers.Dense(256, activation='relu', kernel_regularizer=l2_regularizer),
+        tf.keras.layers.Dense(128, activation='relu', kernel_regularizer=l2_regularizer),
+        tf.keras.layers.Dense(64, activation='relu', kernel_regularizer=l2_regularizer),
+        tf.keras.layers.Dense(32, activation='relu', kernel_regularizer=l2_regularizer),
+        tf.keras.layers.Dense(16, activation='relu', kernel_regularizer=l2_regularizer),
+        tf.keras.layers.Dense(1, activation='sigmoid', kernel_regularizer=l2_regularizer)
     ])
+    
     model.compile(
         optimizer='adam',
         loss='binary_crossentropy',
         metrics=['accuracy']
     )
+    
     return model
