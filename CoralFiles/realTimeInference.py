@@ -130,17 +130,17 @@ def main():
 
                 prediction = predict(interpreter, scaler, np.array([input_data]))
                 val = "Inside" if prediction > 0.5 else "Outside"
-                msg = "Count: " + str(num) + " Predict: " + val
+                msg = str(num) + ": " + val
                 # print(max(scan_results), sum(scan_results)/len(scan_results))
                 update_display(enviro.display, msg)
                 # print("Inside" if prediction > 0.5 else "Outside")
 
-                sleep(5)
+                sleep(2)
             except Exception as e:
                 msg = "Error"
                 # print(f"An error occurred: {e}")
                 update_display(enviro.display, msg)
-                sleep(5)
+                sleep(2)
 
 if __name__ == "__main__":
     main()

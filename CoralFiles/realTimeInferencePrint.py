@@ -105,8 +105,8 @@ def main():
     
     enviro = EnviroBoard()
 
-    model_path = '../environmentModel_quantized_edgetpu.tflite'
-    scaler_path = '../scaler.pkl'
+    model_path = '/home/mendel/CoralBoard/environmentModel_quantized_edgetpu.tflite'
+    scaler_path = '/home/mendel/CoralBoard/scaler.pkl'
     interpreter = load_model(model_path)
     scaler = load_scaler(scaler_path)
 
@@ -143,10 +143,10 @@ def main():
 
                 print(f"Total predictions made: {num + 1}")
                 num += 1
-                sleep(5)
+                sleep(2)
             except Exception as e:
                 print(f"An error occurred: {e}")
-                sleep(5)
+                sleep(2)
 
 if __name__ == "__main__":
     main()
