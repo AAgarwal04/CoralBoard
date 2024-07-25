@@ -70,13 +70,20 @@ imp <- imp %>% arrange(desc(importance))
 
 # Plot variable importance with optimal mtry and min.node.size values
 ggplot(imp) + 
-  geom_col(aes(x = reorder(variable,importance), y = importance), fill = "#0096d6") + 
-  labs(title = "Variable Importance with Optimal mtry and min.node.size Values",
+  geom_col(aes(x = reorder(variable,importance), y = importance), fill = "#549EF8") + 
+  labs(title = "Variable Importance",
        x = "Inputs",
        y = "Relative Importance") +
   ggeasy::easy_center_title() + 
-  coord_flip()
-
+  coord_flip() +
+  theme(
+    axis.text = element_text(size = 22),       # Increase axis value size
+    axis.text.y = element_text(size = 22),     # Adjust y-axis text (variable names) separately if needed
+    axis.title = element_text(size = 24),      # Increase axis title size
+    plot.title = element_text(size = 26),      # Increase plot title size
+    plot.margin = margin(10, 10, 10, 10, "pt") # Add some margin around the plot
+  ) +
+  theme(aspect.ratio = 0.9)  # Adjust this value to change the chart's aspect ratio
 # Print optimal mtry and min.node.size values
 print(paste("Optimal mtry:", maxVal$mtry))
 print(paste("Optimal min.node.size:", maxVal$min.node.size))
