@@ -20,6 +20,9 @@ import joblib
 
 DEFAULT_CONFIG_LOCATION = os.path.join(os.path.dirname(__file__), 'cloud_config.ini')
 
+warnings.filterwarnings("ignore", category=UserWarning)
+warnings.filterwarnings("ignore", category=FutureWarning)
+
 def update_display(display, msg):
     with canvas(display) as draw:
         draw.text((0, 0), msg, fill='white')
