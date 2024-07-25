@@ -1,131 +1,152 @@
 import numpy as np
 from pycoral.utils import edgetpu
-from pycoral.adapters import common
-from pycoral.adapters import classify
 from coral.enviro.board import EnviroBoard
 from coral.cloudiot.core import CloudIot
 from luma.core.render import canvas
 from PIL import ImageDraw
 from time import sleep
 import argparse
+import threading
 import os
+import keyboard
 from periphery import GPIO, Serial
 import subprocess
 import asyncio
 import warnings
 from bleak import BleakScanner
-import warnings
-
-warnings.filterwarnings("ignore", message="BLEDevice.rssi is deprecated", category=FutureWarning)
+from tflite_runtime.interpreter import Interpreter
+from tflite_runtime.interpreter import load_delegate
+import joblib
 
 DEFAULT_CONFIG_LOCATION = os.path.join(os.path.dirname(__file__), 'cloud_config.ini')
+
+warnings.filterwarnings("ignore", category=UserWarning)
+warnings.filterwarnings("ignore", category=FutureWarning)
 
 def update_display(display, msg):
     with canvas(display) as draw:
         draw.text((0, 0), msg, fill='white')
 
+def _none_to_nan(val):
+    return float('nan') if val is None else val
+
 def get_wifi_info():
     output = subprocess.check_output(['nmcli', '-f', 'SIGNAL', 'dev', 'wifi', 'list'], encoding='utf-8')
     output = output.split('\n')[1:]
     output = list(filter(None, output))
-    # output = output[:len(output)-1]
     signal_strengths = []
     for line in output:
         if line[0].isdigit():
             signal_strengths.append(int(line.strip()))
     signal_strengths = list(filter(None, signal_strengths))
-    #print(signal_strengths)
     avg = (sum(signal_strengths)/len(signal_strengths)) if len(signal_strengths) != 0 else 0
-    return len(signal_strengths), avg, max(signal_strengths)
+    if len(signal_strengths) == 0:
+        return 0, 0, 0
+    else:
+        return len(signal_strengths), avg, max(signal_strengths)
 
 async def scan_bluetooth():
-    scanner = BleakScanner()
-    devices = await scanner.discover(timeout=3.0)
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore", RuntimeWarning)
+        scanner = BleakScanner()
+        devices = await scanner.discover(timeout=3.0)
     rssiStrength = []
     for device in devices:
         rssi = device.rssi if hasattr(device, 'rssi') else "Unknown"
         rssiStrength.append(rssi)
     rssiStrength = list(filter(lambda x: x != "Unknown", rssiStrength))
     avg = sum(rssiStrength)/len(rssiStrength) if len(rssiStrength) != 0 else 0
-    return len(rssiStrength), max(rssiStrength), avg
+    if len(rssiStrength) == 0:
+        return 0, 0, 0
+    else:
+        return len(rssiStrength), max(rssiStrength), avg
 
-# Load the saved EdgeTPU model
-model_path = 'environmentModel_edgetpu.tflite'
-interpreter = edgetpu.make_interpreter(model_path)
-interpreter.allocate_tensors()
+def load_model(model_path):
+    edgetpu_delegate = load_delegate('libedgetpu.so.1')
+    interpreter = Interpreter(
+        model_path=model_path,
+        experimental_delegates=[edgetpu_delegate])
+    interpreter.allocate_tensors()
+    return interpreter
 
-# Get input details
-input_details = interpreter.get_input_details()
-input_shape = input_details[0]['shape']
-print("Expected input shape:", input_shape)
+def load_scaler(scaler_path):
+    return joblib.load(scaler_path)
 
-def predict(X):
-    # Ensure X is a 2D array
-    if X.ndim == 1:
-        X = X.reshape(1, -1)
+def preprocess_data(scaler, X):
+    return scaler.transform(X)
+
+def predict(interpreter, scaler, X):
+    input_details = interpreter.get_input_details()
+    output_details = interpreter.get_output_details()
+    X_scaled = preprocess_data(scaler, X)
     
-    # Convert to float32
-    input_data = X.astype(np.float32)
+    input_scale, input_zero_point = input_details[0]['quantization']
+    row_quantized = X_scaled[0] / input_scale + input_zero_point
+    row_quantized = row_quantized.astype(input_details[0]['dtype'])
+    interpreter.set_tensor(input_details[0]['index'], np.expand_dims(row_quantized, axis=0))
     
-    # Set the input tensor
-    interpreter.set_tensor(input_details[0]['index'], input_data)
-    
-    # Run inference
     interpreter.invoke()
     
-    # Get the output
-    output_details = interpreter.get_output_details()
-    output_data = interpreter.get_tensor(output_details[0]['index'])
-    return output_data.flatten()[0]  # Flatten and take the first element
-
+    output = interpreter.get_tensor(output_details[0]['index'])
+    
+    output_scale, output_zero_point = output_details[0]['quantization']
+    output = (output.astype(np.float32) - output_zero_point) * output_scale
+    
+    return output[0]
 
 def main():
-    # Pull arguments from command line.
+    warnings.filterwarnings("ignore", category=RuntimeWarning, module="bleak")
+    
     parser = argparse.ArgumentParser(description='Enviro Kit Demo')
-    parser.add_argument('--display_duration',
-            help='Measurement display duration (seconds)', type=int,
-            default=5)
-    parser.add_argument('--upload_delay', help='Cloud upload delay (seconds)',
-            type=int, default=300)
-    parser.add_argument(
-            '--cloud_config', help='Cloud IoT config file', default=DEFAULT_CONFIG_LOCATION)
+    parser.add_argument('--display_duration', help='Measurement display duration (seconds)', type=int, default=5)
+    parser.add_argument('--upload_delay', help='Cloud upload delay (seconds)', type=int, default=300)
+    parser.add_argument('--cloud_config', help='Cloud IoT config file', default=DEFAULT_CONFIG_LOCATION)
     args = parser.parse_args()
-    # Create instances of EnviroKit and Cloud IoT.
+    
     enviro = EnviroBoard()
-    button = GPIO("/dev/gpiochip2", 9, "in")
-    num = 0
+
+    model_path = '../environmentModel_quantized_edgetpu.tflite'
+    scaler_path = '../scaler.pkl'
+    interpreter = load_model(model_path)
+    scaler = load_scaler(scaler_path)
 
     while True:
-        wifiAmnt, wifiAvg, wifiMax = get_wifi_info()
-        bleAmnt, bleMax, bleAvg = asyncio.run(scan_bluetooth())
-        X = np.array([
-            int(enviro.humidity), int(enviro.ambient_light), int(enviro.pressure), 
-            wifiAmnt, wifiAvg, wifiMax, 
-            bleAmnt, bleAvg, bleMax
-        ])
+        sensors = {}
+        num = 0
 
-        # Perform inference
-        prediction = predict(X)
-        features = ["RH", "Light", "Pressure", "WifiAmnt", "WifiAvg", "WifiMax", "BLEAmnt", "BLEAvg", "BLEMax"]
+        while True:
+            try:
+                sensors['humidity'] = int(enviro.humidity)
+                sensors['ambient_light'] = int(enviro.ambient_light)
+                sensors['wifiAmnt'], sensors['wifiAvg'], sensors['wifiMax'] = get_wifi_info()
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore", RuntimeWarning)
+                    sensors['bleAmnt'], sensors['bleMax'], sensors['bleAvg'] = asyncio.run(scan_bluetooth())
 
-        # Print results
-        print("Row {}:".format(num))
-        print("  Raw Data:")
-        for feature, value in zip(features, X):
-            print("    {}: {}".format(feature, value))
-        outcome = 'Inside' if prediction > 0.5 else 'Outside'
-        print("  Prediction: {}".format(outcome))
-        print("  Probability: {:.4f}".format(prediction))
+                input_data = np.array([
+                    sensors["humidity"], sensors["ambient_light"],
+                    sensors["wifiAmnt"], sensors["wifiAvg"], sensors["wifiMax"],
+                    sensors['bleAmnt'], sensors["bleAvg"], sensors["bleMax"]
+                ], dtype=np.float32)
 
-        update_display(enviro.display, outcome)
+                prediction = predict(interpreter, scaler, np.array([input_data]))
 
-        sleep(10)
-        num += 1
+                features = ["RH", "Light", "WifiAmnt", "WifiAvg", "WifiMax", "BLEAmnt", "BLEAvg", "BLEMax"]
 
-if __name__ == '__main__':
-    thermFile = "/sys/class/thermal/thermal_zone0/trip_point_4_temp"
-    file = open(thermFile, "w")
-    file.write("20000")
-    file.flush()
-    file.close()
+                print(f"Row {num + 1}:")
+                print("  Raw Data:")
+                for feature, value in zip(features, input_data):
+                    print(f"    {feature}: {value}")
+                print(f"  Prediction: {'Inside' if prediction > 0.5 else 'Outside'}")
+                print(f"  Probability: {prediction[0]:.4f}")
+                print()
+
+                print(f"Total predictions made: {num + 1}")
+                num += 1
+                sleep(5)
+            except Exception as e:
+                print(f"An error occurred: {e}")
+                sleep(5)
+
+if __name__ == "__main__":
     main()
