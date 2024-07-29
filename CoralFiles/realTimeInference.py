@@ -105,8 +105,8 @@ def main():
     
     enviro = EnviroBoard()
 
-    model_path = '../environmentModel_quantized_edgetpu.tflite'
-    scaler_path = '../scaler.pkl'
+    model_path = '/home/mendel/CoralBoard/environmentModel_quantized_edgetpu.tflite'
+    scaler_path = '/home/mendel/CoralBoard/scaler.pkl'
     interpreter = load_model(model_path)
     scaler = load_scaler(scaler_path)
 
@@ -141,6 +141,8 @@ def main():
                 # print(f"An error occurred: {e}")
                 update_display(enviro.display, msg)
                 sleep(2)
+            num += 1
 
 if __name__ == "__main__":
+    sleep(5)
     main()
