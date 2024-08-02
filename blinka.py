@@ -1,6 +1,9 @@
 import time
 import board
 import busio
+import subprocess
+
+result = subprocess.run(["powershell", "-Command", "$env:BLINKA_MCP2221=1"], capture_output=True, text=True)
 
 # Initialize the I2C bus
 i2c = busio.I2C(board.SCL, board.SDA)
