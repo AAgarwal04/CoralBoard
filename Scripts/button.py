@@ -6,6 +6,10 @@ import subprocess
 import asyncio
 from bleak import BleakScanner
 import warnings
+import board
+import busio
+import pygetwindow as gw
+from pywinauto import Application
 
 warnings.filterwarnings("ignore")
 
@@ -27,7 +31,12 @@ MEASUREMENT_CONFIG = 0x0F
 
 def get_wifi_info():
     try:
-        output = subprocess.check_output(['netsh', 'wlan', 'show', 'networks', 'mode=Bssid'], encoding='utf-8')
+        output = subprocess.check_output(['netsh', 'wlan', 'show', 'networks', 'mode=Bssid'])
+        try:
+            output = output.decode('utf-8')
+        except UnicodeDecodeError:
+            output = output.decode('latin-1')
+        
         lines = output.split('\n')
         signal_strengths = []
         for line in lines:
@@ -40,6 +49,43 @@ def get_wifi_info():
             return len(signal_strengths), max(signal_strengths), sum(signal_strengths)/len(signal_strengths)
     except subprocess.CalledProcessError:
         return 0, 0, 0
+
+def show_and_close_available_networks():
+    while True:
+        time.sleep(10)
+        wifiAmnt, aux0, aux1 = get_wifi_info()
+        if wifiAmnt < 1:
+            try:
+                # Open the "Show Available Networks" panel
+                process = subprocess.Popen(["explorer.exe", "ms-availablenetworks:"])
+                print("Show Available Networks panel opened successfully.")
+                
+                # Wait for the window to open
+                time.sleep(3)
+                
+                # Find the window and send it to the background
+                windows = gw.getWindowsWithTitle("Available Networks")
+                if windows:
+                    window = windows[0]
+                    app = Application().connect(handle=window._hWnd)
+                    app.window(handle=window._hWnd).minimize()
+                    print("Show Available Networks panel minimized successfully.")
+                
+                # Wait for 3 seconds
+                time.sleep(3)
+                
+                # Close the panel
+                subprocess.run(["taskkill", "/F", "/IM", "explorer.exe"], check=True)
+                print("Show Available Networks panel closed successfully.")
+                
+                # Restart explorer.exe to restore the desktop and taskbar
+                subprocess.Popen(["explorer.exe"])
+                print("Explorer restarted.")
+                
+            except subprocess.CalledProcessError:
+                print("Failed to open or close the Show Available Networks panel.")
+            except Exception as e:
+                print(f"An error occurred: {e}")
 
 async def scan_bluetooth():
     try:
@@ -105,11 +151,11 @@ def read_temperature_humidity():
 
 def print_location():
     global location
-    filename = "/Users/AgAr082/Documents/Scripts/file.txt"
+    filename = "file.txt"
     
     while True:
         file1 = open(filename, "a")
-        time.sleep(1)
+        time.sleep(2)
         wifiAmnt, wifiMax, wifiAvg = get_wifi_info()
         bleAmnt, bleMax, bleAvg = asyncio.run(scan_bluetooth())
         temp, humid = read_temperature_humidity()
@@ -118,7 +164,7 @@ def print_location():
         print(f"Temp: {temp}, Humidity: {humid}")
         print(f"You are {location}")
         print("----")
-        message = f"{wifiAmnt}, {wifiMax}, {wifiAvg:.2f}, {bleAmnt}, {bleMax}, {bleAvg:.2f}, {temp}, {humid}, {location}\n"
+        message = f"{humid}, {wifiAmnt}, {wifiMax}, {wifiAvg:.2f}, {bleAmnt}, {bleMax}, {bleAvg:.2f}, {location}\n"
         file1.write(message)
         file1.flush()
         file1.close()
@@ -134,6 +180,9 @@ def main():
 
     button = tk.Button(root, text="Location", command=lambda: show_custom_popup(root))
     button.pack(pady=20)
+
+    wifi_thread = threading.Thread(target=show_and_close_available_networks, daemon=True)
+    wifi_thread.start()
 
     location_thread = threading.Thread(target=print_location, daemon=True)
     location_thread.start()
