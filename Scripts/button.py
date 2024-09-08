@@ -173,7 +173,7 @@ def print_location():
 
 def main():
     root = tk.Tk()
-    root.title("Custom Popup Example")
+    root.title("Inside/Outside Data Collection")
     root.geometry("300x200")
     
     
