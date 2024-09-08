@@ -158,13 +158,13 @@ def print_location():
         time.sleep(2)
         wifiAmnt, wifiMax, wifiAvg = get_wifi_info()
         bleAmnt, bleMax, bleAvg = asyncio.run(scan_bluetooth())
-        temp, humid = read_temperature_humidity()
+        #temp, humid = read_temperature_humidity()
         print(f"Wi-Fi: {wifiAmnt}, {wifiMax}, {wifiAvg:.2f}")
         print(f"Bluetooth: {bleAmnt}, {bleMax}, {bleAvg:.2f}")
-        print(f"Temp: {temp}, Humidity: {humid}")
+        #print(f"Temp: {temp}, Humidity: {humid}")
         print(f"You are {location}")
         print("----")
-        message = f"{humid}, {wifiAmnt}, {wifiMax}, {wifiAvg:.2f}, {bleAmnt}, {bleMax}, {bleAvg:.2f}, {location}\n"
+        message = f"{wifiAmnt}, {wifiMax}, {wifiAvg:.2f}, {bleAmnt}, {bleMax}, {bleAvg:.2f}, {location}\n"
         file1.write(message)
         file1.flush()
         file1.close()
